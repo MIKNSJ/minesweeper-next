@@ -2,13 +2,13 @@
 
 import React from "react";
 import { useState, useEffect } from "react";
+import Image from 'next/image'
 import Board from "./board.js";
 import Cell from "./cell.js";
 
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
 const WINNING_SCORE = 64;
-var GENERATED_MINES = 0;
 var APPLIED_NUMBERS = 0;
 var REPLACE_ZEROES = 0;
 var REMAP_FIRST_MINE_CELL = 0;
@@ -26,6 +26,13 @@ export default function Game() {
     // const [cells, setCells] = useState(Array.from({length: 8}, () => Array(8).fill(0)));
     const [cells, setCells] = useState(Array(8).fill(null).map(() => Array(8).fill("")));
     const [hiddenCells, setHiddenCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
+    const [flagCells, setFlagCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
+    const [flagsCount, setFlagCount] = useState(10);
+    const [flagMode, setFlagMode] = useState(0);
+    const [mines, setMines] = useState(0);
+    const [numbers, setNumbers] = useState(0);
+    const [replaceZeroes, setReplaceZeroes] = useState(0);
+    const [firstMine, setFirstMine] = useState(0);
     const [win, setWin] = useState(null);
     const [score, setScore] = useState(0);
 
@@ -37,13 +44,13 @@ export default function Game() {
             let row = rand();
             let col = rand();
 
-            if (modifiedHiddenCells[row][col] != "<^>") {
-                modifiedHiddenCells[row][col] = "<^>";
+            if (modifiedHiddenCells[row][col] != "*") {
+                modifiedHiddenCells[row][col] = "*";
                 idx++
             }
         }
         setHiddenCells(modifiedHiddenCells);
-        GENERATED_MINES = 1;
+        setMines(1);
     }
 
 
@@ -51,43 +58,43 @@ export default function Game() {
         const modifiedHiddenCells = [...hiddenCells]; // or cells.slice()
         for (let i = 0; i < modifiedHiddenCells.length; i++) {
             for (let j = 0; j < modifiedHiddenCells[i].length; j++) {
-                if (hiddenCells[i][j] == "<^>") {
+                if (hiddenCells[i][j] == "*") {
                     if (i - 1 >= 0 && j - 1 >= 0) {
-                        if (modifiedHiddenCells[i-1][j-1] != "<^>") {
+                        if (modifiedHiddenCells[i-1][j-1] != "*") {
                             modifiedHiddenCells[i-1][j-1]+=1;
                         }
 
-                        if (modifiedHiddenCells[i][j-1] != "<^>") {
+                        if (modifiedHiddenCells[i][j-1] != "*") {
                             modifiedHiddenCells[i][j-1]+=1;
                         }
 
-                        if (modifiedHiddenCells[i-1][j] != "<^>") {
+                        if (modifiedHiddenCells[i-1][j] != "*") {
                             modifiedHiddenCells[i-1][j]+=1;
                         }
                     }
 
                     if (i + 1 < hiddenCells.length && j + 1 < hiddenCells.length) {
-                        if (modifiedHiddenCells[i][j+1] != "<^>") {
+                        if (modifiedHiddenCells[i][j+1] != "*") {
                             modifiedHiddenCells[i][j+1]+=1;
                         }
                         
-                        if (modifiedHiddenCells[i+1][j] != "<^>") {
+                        if (modifiedHiddenCells[i+1][j] != "*") {
                             modifiedHiddenCells[i+1][j]+=1;
                         }
                         
-                        if (modifiedHiddenCells[i+1][j+1] != "<^>") {
+                        if (modifiedHiddenCells[i+1][j+1] != "*") {
                             modifiedHiddenCells[i+1][j+1]+=1;
                         }
                     }
 
                     if (i + 1 < hiddenCells.length && j - 1 >= 0) {
-                        if (modifiedHiddenCells[i+1][j-1] != "<^>") {
+                        if (modifiedHiddenCells[i+1][j-1] != "*") {
                             modifiedHiddenCells[i+1][j-1]+=1;
                         }
                     }
 
                     if (i - 1 >= 0 && j + 1 < hiddenCells.length) {
-                        if (modifiedHiddenCells[i-1][j+1] != "<^>") {
+                        if (modifiedHiddenCells[i-1][j+1] != "*") {
                             modifiedHiddenCells[i-1][j+1]+=1;
                         }
                     }
@@ -95,7 +102,7 @@ export default function Game() {
             }
         }
         setHiddenCells(modifiedHiddenCells);
-        APPLIED_NUMBERS = 1;
+        setNumbers(1);
     }
 
 
@@ -109,7 +116,7 @@ export default function Game() {
             }
         }
         setHiddenCells(modifiedHiddenCells)
-        REPLACE_ZEROES = 1;
+        setReplaceZeroes(1);
     }
 
 
@@ -148,8 +155,8 @@ export default function Game() {
             let new_row = rand();
             let new_col = rand();
 
-            if (modifiedHiddenCells[new_row][new_col] != "<^>") {
-                modifiedHiddenCells[new_row][new_col] = "<^>";
+            if (modifiedHiddenCells[new_row][new_col] != "*") {
+                modifiedHiddenCells[new_row][new_col] = "*";
                 break;
             }
         }
@@ -170,7 +177,7 @@ export default function Game() {
             return;
         }
 
-        if (hiddenCells[x][y] == "<^>") {
+        if (hiddenCells[x][y] == "*") {
             return;
         }
 
@@ -218,30 +225,31 @@ export default function Game() {
         }
     }
 
+
     useEffect(() => {
-        if (GENERATED_MINES != 1) {
+        if (mines != 1) {
             generateMines();
         }
 
-        if (APPLIED_NUMBERS != 1) {
+        if (numbers != 1) {
             applyNumbersToCells();
         }
 
-        if (REPLACE_ZEROES != 1) {
+        if (replaceZeroes != 1) {
             replaceZeroesToDashes();
         }
-    })
+    }, [mines, numbers, replaceZeroes])
 
 
     function handleClick(row, col) {
         if (win == null) {
-            if (hiddenCells[row][col] == "<^>" && REMAP_FIRST_MINE_CELL == 0) {
+            if (hiddenCells[row][col] == "*" && firstMine == 0) {
                 remapFirstMine(row, col);
             } else {
-                REMAP_FIRST_MINE_CELL = 1;
+                setFirstMine(1);
             }
 
-            if (hiddenCells[row][col] == "<^>") {
+            if (hiddenCells[row][col] == "*") {
                 setWin(0);
                 return;
             }
@@ -249,15 +257,56 @@ export default function Game() {
             traverseCells(row, col);
         }
     }
+
+
+    function onClickFlags() {
+        setFlagMode(1);
+    }
+
+
+    function reset() {
+        const modifiedCells = [...cells];
+        for (let i = 0; i < modifiedCells.length; i++) {
+            for (let j = 0; j < modifiedCells[i].length; j++) {
+                modifiedCells[i][j] = "";
+            }
+        }
+
+        const modifiedHiddenCells = [...hiddenCells];
+        for (let i = 0; i < modifiedHiddenCells.length; i++) {
+            for (let j = 0; j < modifiedHiddenCells[i].length; j++) {
+                modifiedHiddenCells[i][j] = 0;
+            }
+        }
+
+        setCells(modifiedCells);
+        setHiddenCells(modifiedHiddenCells);
+        setMines(0);
+        setNumbers(0);
+        setReplaceZeroes(0);
+        setFirstMine(0);
+        setWin(null);
+        setScore(0);
+    }
    
-    
+
     return (
         <>
-            {win == null ? <Board value={board}/> : <Board value={board2}></Board>}
-            <h1 className="container mx-auto text-white self-center">Score: {score}</h1>
+            {win == null ? <Board value={board}/> : <Board value={board2}/>}
+            <div className="container mx-auto max-w-screen-sm px-4 py-3 flex flex-col justify-center items-center gap-5 text-white">
+                <div className="w-[100%] flex justify-between items-center">
+                    <button className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
+                        <Image src="/flag_icon.png" width={40} height={40} alt="refresh_icon"/>
+                    </button>
+                    <h1 className="text-sm md:text-lg">Score: {score}</h1>
+                    <button onClick={reset} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
+                        <Image src="/refresh_icon.png" width={40} height={40} alt="refresh_icon"/>
+                    </button>
+                </div>
+                {win == 1 ? <h1 className="text-lg md:text-xl">You have Win!</h1> : null}
+                {win == 0 ? <h1 className="text-lg md:text-xl">You have Lost!</h1>: null}
+            </div>
             <Board value={board2}/>
-            {win == 1 ? <h1 className="container mx-auto text-white self-center">You Win!</h1> : null}
-            {win == 0 ? <h1 className="container mx-auto text-white self-center">You Lost!</h1>: null}
         </>
     )
 }
