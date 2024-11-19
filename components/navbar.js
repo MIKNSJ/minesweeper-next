@@ -10,10 +10,10 @@ export default function Navbar() {
                 <div className="container mx-auto max-w-screen-xl flex justify-between items-center shadow-md p-4">
                     <div className="flex gap-4 items-center">
                         <Image src="/mine_icon.png" width={50} height={50} alt="mine_icon"/>
-                        <h1 className="text-white sm:text-4xl uppercase">Minesweeper</h1>
+                        <h1 className="text-white sm:text-4xl">Minesweeper</h1>
                     </div>
                     <button className="bg-white flex p-4 rounded">
-                        <Link href="/" className="text-black uppercase">Log In</Link>
+                        <Link href="/" className="text-black">Log In</Link>
                     </button>
                 </div>
             </div>

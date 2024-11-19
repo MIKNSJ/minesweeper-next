@@ -8,10 +8,6 @@ import Cell from "./cell.js";
 
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
-const WINNING_SCORE = 64;
-var APPLIED_NUMBERS = 0;
-var REPLACE_ZEROES = 0;
-var REMAP_FIRST_MINE_CELL = 0;
 const visitedCells = new Set([]);
 
 
@@ -30,6 +26,7 @@ export default function Game() {
     const [flagsCount, setFlagCount] = useState(10);
     const [flagMode, setFlagMode] = useState(0);
     const [mines, setMines] = useState(0);
+    const [bustedMine, setBustedMine] = useState([-1,-1]);
     const [numbers, setNumbers] = useState(0);
     const [replaceZeroes, setReplaceZeroes] = useState(0);
     const [firstMine, setFirstMine] = useState(0);
@@ -164,11 +161,13 @@ export default function Game() {
         replaceDashesToZeroes();
         applyNumbersToCells();
         replaceZeroesToDashes();
+        setFirstMine(1);
     }
 
 
     function traverseCells(x, y) {
         const modifiedCells = [...cells]; // or cells.slice()
+        const modifiedFlagCells = [...flagCells];
         if (score == 54) {
             setWin(1);
         }
@@ -186,12 +185,19 @@ export default function Game() {
             setScore(score => score + 1);
             visitedCells.add(`${x},${y}`);
             setCells(modifiedCells);
+            modifiedFlagCells[x][y] = 0;
+            setFlagCells(modifiedFlagCells);
+            setFlagCount(flagsCount => flagsCount + 1);
             return;
         }
 
         modifiedCells[x][y] = hiddenCells[x][y];
         setScore(score => score + 1);
         visitedCells.add(`${x},${y}`);
+        setCells(modifiedCells);
+        modifiedFlagCells[x][y] = 0;
+        setFlagCells(modifiedFlagCells);
+        setFlagCount(flagsCount => flagsCount + 1);
 
         traverseCells(x, y-1);
         traverseCells(x, y+1);
@@ -209,7 +215,7 @@ export default function Game() {
     for (let i = 0; i < cells.length; i++) {
         for (let j = 0; j < cells[i].length; j++) {
             board.push(
-                <Cell key={id} onCellClick={() => {handleClick(i, j)}} value={cells[i][j]}></Cell>
+                <Cell key={id} onCellClick={() => {handleClick(i, j)}} value={cells[i][j]} type={flagCells[i][j] == 0 ? 0 : 2} bustedCell = {0}/>
             )
             id+=1
         }
@@ -219,7 +225,7 @@ export default function Game() {
     for (let i = 0; i < hiddenCells.length; i++) {
         for (let j = 0; j < hiddenCells[i].length; j++) {
             board2.push(
-                <Cell key={id} onCellClick={() => {handleClick(i, j)}} value={hiddenCells[i][j]}></Cell>
+                <Cell key={id} value={hiddenCells[i][j]} type={hiddenCells[i][j] == "*" ? 1 : 0} bustedCell = {bustedMine[0] == i && bustedMine[1] == j ? 1 : 0}/>
             )
             id+=1
         }
@@ -243,24 +249,49 @@ export default function Game() {
 
     function handleClick(row, col) {
         if (win == null) {
-            if (hiddenCells[row][col] == "*" && firstMine == 0) {
-                remapFirstMine(row, col);
-            } else {
-                setFirstMine(1);
-            }
+            if (flagMode != 1 && flagCells[row][col] == 0) { // not in flag mode and cell is not a flag
+                if (hiddenCells[row][col] == "*" && firstMine == 0) {
+                    remapFirstMine(row, col);
+                } else {
+                    setFirstMine(1);
+                }
 
-            if (hiddenCells[row][col] == "*") {
-                setWin(0);
-                return;
-            }
+                if (hiddenCells[row][col] == "*") {
+                    setBustedMine([row, col]);
+                    console.log(row + "," + col);
+                    console.log(bustedMine[0] + "," + bustedMine[1], [bustedMine]);
+                    setWin(0);
+                    return;
+                }
 
-            traverseCells(row, col);
+                traverseCells(row, col);
+            } else if (flagMode != 1 && flagCells[row][col] == 1) { // not in flag mode and cell is a flag
+                if (flagCells[row][col] == 1 && cells[row][col] == "") { // cell is flagged
+                    const modifiedFlagCells = [...flagCells]
+                    modifiedFlagCells[row][col] = 0;
+                    setFlagCells(modifiedFlagCells);
+                    setFlagCount(flagsCount => flagsCount + 1);
+                }
+            } else { // in flag mode
+                if (flagsCount > 0) { // we have enough flags
+                    if (flagCells[row][col] == 0 && cells[row][col] == "") { // cell is not flagged
+                        const modifiedFlagCells = [...flagCells]
+                        modifiedFlagCells[row][col] = 1;
+                        setFlagCells(modifiedFlagCells);
+                        setFlagCount(flagsCount => flagsCount - 1);
+                    }
+                }
+            }
         }
     }
 
 
-    function onClickFlags() {
-        setFlagMode(1);
+    function handleFlags() {
+        if (flagMode == 0) {
+            setFlagMode(1);
+        } else {
+            setFlagMode(0);
+        }
     }
 
 
@@ -279,9 +310,21 @@ export default function Game() {
             }
         }
 
+        const modifiedFlagCells = [...flagCells];
+        for (let i = 0; i < modifiedFlagCells.length; i++) {
+            for (let j = 0; j < modifiedFlagCells[i].length; j++) {
+                modifiedFlagCells[i][j] = 0;
+            }
+        }
+
         setCells(modifiedCells);
         setHiddenCells(modifiedHiddenCells);
+        visitedCells.clear();
+        setFlagCells(modifiedFlagCells);
+        setFlagCount(10);
+        setFlagMode(0);
         setMines(0);
+        setBustedMine([-1,-1]);
         setNumbers(0);
         setReplaceZeroes(0);
         setFirstMine(0);
@@ -295,10 +338,13 @@ export default function Game() {
             {win == null ? <Board value={board}/> : <Board value={board2}/>}
             <div className="container mx-auto max-w-screen-sm px-4 py-3 flex flex-col justify-center items-center gap-5 text-white">
                 <div className="w-[100%] flex justify-between items-center">
-                    <button className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
-                        <Image src="/flag_icon.png" width={40} height={40} alt="refresh_icon"/>
+                    <button onClick={handleFlags} className={`text-sm md:text-lg flex border-2 hover:bg-slate-500 ${flagMode == 1 ? "bg-slate-500" : null}`}>
+                        <Image src="/flag_icon.png" width={40} height={40} alt="flag_icon"/>
                     </button>
-                    <h1 className="text-sm md:text-lg">Score: {score}</h1>
+                    <div className="flex flex-col gap-2">
+                        <h1 className="text-sm sm:text-lg">Score: {score}</h1>
+                        <h1 className="text-sm sm:text-lg">Flags: {flagsCount}</h1>
+                    </div>
                     <button onClick={reset} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
                         <Image src="/refresh_icon.png" width={40} height={40} alt="refresh_icon"/>
                     </button>
