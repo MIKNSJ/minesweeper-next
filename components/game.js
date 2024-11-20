@@ -233,6 +233,8 @@ export default function Game() {
 
 
     useEffect(() => {
+        router.refresh();
+
         if (mines != 1) {
             generateMines();
         }

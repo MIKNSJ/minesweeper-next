@@ -12,8 +12,8 @@ export default function Navbar() {
                         <Image src="/mine_icon.png" width={50} height={50} alt="mine_icon"/>
                         <h1 className="text-white sm:text-4xl">Minesweeper</h1>
                     </div>
-                    <button className="bg-white flex p-4 rounded">
-                        <Link href="/" className="text-black">Log In</Link>
+                    <button className="bg-white flex rounded">
+                        <Link href="/login" className="text-black p-4">Log In</Link>
                     </button>
                 </div>
             </div>
