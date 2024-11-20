@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useState, useEffect } from "react";
-import Image from 'next/image'
+import Image from 'next/image';
 import Board from "./board.js";
 import Cell from "./cell.js";
 
@@ -32,6 +32,7 @@ export default function Game() {
     const [firstMine, setFirstMine] = useState(0);
     const [win, setWin] = useState(null);
     const [score, setScore] = useState(0);
+    const [startReset, setStartReset] = useState(0);
 
 
     function generateMines() {
@@ -233,7 +234,9 @@ export default function Game() {
 
 
     useEffect(() => {
-        router.refresh();
+        if (startReset === 0) {
+            reset();
+        }
 
         if (mines != 1) {
             generateMines();
@@ -246,7 +249,7 @@ export default function Game() {
         if (replaceZeroes != 1) {
             replaceZeroesToDashes();
         }
-    }, [mines, numbers, replaceZeroes])
+    }, [mines, numbers, replaceZeroes, startReset]);
 
 
     function handleClick(row, col) {
@@ -332,6 +335,7 @@ export default function Game() {
         setFirstMine(0);
         setWin(null);
         setScore(0);
+        setStartReset(1);
     }
    
 
