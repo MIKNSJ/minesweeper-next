@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import Image from 'next/image';
 import Board from "./board.js";
 import Cell from "./cell.js";
+import { generateToken } from "../components/token.js"
+import User from "../models/User.js"
+import dbConnect from "../lib/dbConnect.js"
 
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
@@ -186,9 +189,12 @@ export default function Game() {
             setScore(score => score + 1);
             visitedCells.add(`${x},${y}`);
             setCells(modifiedCells);
-            modifiedFlagCells[x][y] = 0;
-            setFlagCells(modifiedFlagCells);
-            setFlagCount(flagsCount => flagsCount + 1);
+
+            if (flagCells[x][y] == 1) {
+                modifiedFlagCells[x][y] = 0;
+                setFlagCells(modifiedFlagCells);
+                setFlagCount(flagsCount => flagsCount + 1);
+            }
             return;
         }
 
@@ -196,9 +202,12 @@ export default function Game() {
         setScore(score => score + 1);
         visitedCells.add(`${x},${y}`);
         setCells(modifiedCells);
-        modifiedFlagCells[x][y] = 0;
-        setFlagCells(modifiedFlagCells);
-        setFlagCount(flagsCount => flagsCount + 1);
+
+        if (flagCells[x][y] == 1) {
+            modifiedFlagCells[x][y] = 0;
+            setFlagCells(modifiedFlagCells);
+            setFlagCount(flagsCount => flagsCount + 1);
+        }
 
         traverseCells(x, y-1);
         traverseCells(x, y+1);
@@ -337,6 +346,27 @@ export default function Game() {
         setScore(0);
         setStartReset(1);
     }
+
+
+    async function handleSave() {
+        var token = generateToken();
+        await dbConnect();
+        const userSave = new User({
+            saveSessionId: token,
+            cells: cells,
+            hiddenCells: hiddenCells,
+            flagCells: flagCells,
+            flagCount: flagsCount,
+            flagMode: flagsCount,
+            mines: mines,
+            numbers: numbers,
+            replaceZeroes: replaceZeroes,
+            firstMine: firstMine,
+            score: score,
+        });
+        await userSave.save();
+        alert("Your game has been saved.\nSave ID: " + token);
+    }
    
 
     return (
@@ -351,9 +381,14 @@ export default function Game() {
                         <h1 className="text-sm sm:text-lg">Score: {score}</h1>
                         <h1 className="text-sm sm:text-lg">Flags: {flagsCount}</h1>
                     </div>
-                    <button onClick={reset} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
-                        <Image src="/refresh_icon.png" width={40} height={40} alt="refresh_icon"/>
-                    </button>
+                    <div className="flex gap-10">
+                        <button onClick={handleSave} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
+                            <Image src="/save_icon.png" width={40} height={40} alt="refresh_icon"/>
+                        </button>
+                        <button onClick={reset} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
+                            <Image src="/refresh_icon.png" width={40} height={40} alt="refresh_icon"/>
+                        </button>
+                    </div>
                 </div>
                 {win == 1 ? <h1 className="text-lg md:text-xl">You have Win!</h1> : null}
                 {win == 0 ? <h1 className="text-lg md:text-xl">You have Lost!</h1>: null}
