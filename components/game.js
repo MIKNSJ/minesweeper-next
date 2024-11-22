@@ -2,17 +2,24 @@
 
 import React from "react";
 import { useState, useEffect } from "react";
+import Form from "next/form.js"
 import Image from 'next/image';
 import Board from "./board.js";
 import Cell from "./cell.js";
-import { generateToken } from "../components/token.js"
-import User from "../models/User.js"
-import dbConnect from "../lib/dbConnect.js"
+import { generateToken } from "../components/token.js";
+import dbConnect from "../lib/dbConnect.js";
+import User from "../models/User.js";
 
+
+
+/* 
+    [i-1][j-1] 	[i-1][j] 	[i-1][j+1]
+    [i][j-1]	[i][j]		[i][j+1]
+    [i+1][j-1]	[i+1][j]	[i+1][j+1]
+*/
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
 const visitedCells = new Set([]);
-
 
 
 function rand() {
@@ -26,7 +33,7 @@ export default function Game() {
     const [cells, setCells] = useState(Array(8).fill(null).map(() => Array(8).fill("")));
     const [hiddenCells, setHiddenCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
     const [flagCells, setFlagCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
-    const [flagsCount, setFlagCount] = useState(10);
+    const [flagCount, setFlagCount] = useState(10);
     const [flagMode, setFlagMode] = useState(0);
     const [mines, setMines] = useState(0);
     const [bustedMine, setBustedMine] = useState([-1,-1]);
@@ -36,6 +43,7 @@ export default function Game() {
     const [win, setWin] = useState(null);
     const [score, setScore] = useState(0);
     const [startReset, setStartReset] = useState(0);
+    const [currSaveSessionId, setCurrSaveSessionId] = useState(null);
 
 
     function generateMines() {
@@ -193,7 +201,7 @@ export default function Game() {
             if (flagCells[x][y] == 1) {
                 modifiedFlagCells[x][y] = 0;
                 setFlagCells(modifiedFlagCells);
-                setFlagCount(flagsCount => flagsCount + 1);
+                setFlagCount(flagCount => flagCount + 1);
             }
             return;
         }
@@ -206,7 +214,7 @@ export default function Game() {
         if (flagCells[x][y] == 1) {
             modifiedFlagCells[x][y] = 0;
             setFlagCells(modifiedFlagCells);
-            setFlagCount(flagsCount => flagsCount + 1);
+            setFlagCount(flagCount => flagCount + 1);
         }
 
         traverseCells(x, y-1);
@@ -272,8 +280,6 @@ export default function Game() {
 
                 if (hiddenCells[row][col] == "*") {
                     setBustedMine([row, col]);
-                    console.log(row + "," + col);
-                    console.log(bustedMine[0] + "," + bustedMine[1], [bustedMine]);
                     setWin(0);
                     return;
                 }
@@ -284,15 +290,15 @@ export default function Game() {
                     const modifiedFlagCells = [...flagCells]
                     modifiedFlagCells[row][col] = 0;
                     setFlagCells(modifiedFlagCells);
-                    setFlagCount(flagsCount => flagsCount + 1);
+                    setFlagCount(flagCount => flagCount + 1);
                 }
             } else { // in flag mode
-                if (flagsCount > 0) { // we have enough flags
+                if (flagCount > 0) { // we have enough flags
                     if (flagCells[row][col] == 0 && cells[row][col] == "") { // cell is not flagged
                         const modifiedFlagCells = [...flagCells]
                         modifiedFlagCells[row][col] = 1;
                         setFlagCells(modifiedFlagCells);
-                        setFlagCount(flagsCount => flagsCount - 1);
+                        setFlagCount(flagCount => flagCount - 1);
                     }
                 }
             }
@@ -345,30 +351,80 @@ export default function Game() {
         setWin(null);
         setScore(0);
         setStartReset(1);
+        setCurrSaveSessionId(null);
     }
 
 
     async function handleSave() {
-        var token = generateToken();
-        await dbConnect();
-        const userSave = new User({
-            saveSessionId: token,
-            cells: cells,
-            hiddenCells: hiddenCells,
-            flagCells: flagCells,
-            flagCount: flagsCount,
-            flagMode: flagsCount,
-            mines: mines,
-            numbers: numbers,
-            replaceZeroes: replaceZeroes,
-            firstMine: firstMine,
-            score: score,
-        });
-        await userSave.save();
-        alert("Your game has been saved.\nSave ID: " + token);
-    }
-   
+        if (win == null) {
+            const token = generateToken();
+            await dbConnect();
+            const userSave = await new User({
+                saveSessionId: token,
+                cells: cells,
+                hiddenCells: hiddenCells,
+                flagCells: flagCells,
+                visitedCells: visitedCells,
+                flagCount: flagCount,
+                flagMode: flagMode,
+                mines: mines,
+                numbers: numbers,
+                replaceZeroes: replaceZeroes,
+                firstMine: firstMine,
+                score: score,
+            });
+            
+            // Send the data to the backend API
+            const response = await fetch("/api/save", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userSave)
+            });
 
+            const data = await response.json();
+
+            if (response.status === 200) {
+                alert("Your game has been saved.\nSession ID: " + token);
+            } else if (response.status === 401) {
+                handleSave();
+            } else {
+                alert(data.message || "An error occurred while saving your game.");
+            }
+        } else {
+            alert("You cannot save your game because it has ended.");
+        }
+    }
+
+
+    async function findSession() {
+        console.log(currSaveSessionId)
+        const response = await fetch(`api/save?saveSessionId=${currSaveSessionId}`);
+        const data = await response.json();
+        console.log(data);
+
+        if (response.status === 200) {
+            reset();
+            setCells(data.cells);
+            setHiddenCells(data.hiddenCells);
+            setFlagCells(data.flagCells);
+            visitedCells = data.visitedCells;
+            setFlagCount(data.flagCount);
+            setFlagMode(data.flagMode)
+            setMines(data.mines);
+            setNumbers(data.numbers);
+            setFirstMine(data.firstMine);
+            setScore(data.score);
+            alert("Your game has loaded.");
+        } else if (response.status === 404) {
+            alert("Your save could not be found.");
+        } else {
+            alert(data.message || "An error occurred while loading your game.");
+        }
+    }
+
+    
     return (
         <>
             {win == null ? <Board value={board}/> : <Board value={board2}/>}
@@ -379,7 +435,7 @@ export default function Game() {
                     </button>
                     <div className="flex flex-col gap-2">
                         <h1 className="text-sm sm:text-lg">Score: {score}</h1>
-                        <h1 className="text-sm sm:text-lg">Flags: {flagsCount}</h1>
+                        <h1 className="text-sm sm:text-lg">Flags: {flagCount}</h1>
                     </div>
                     <div className="flex gap-10">
                         <button onClick={handleSave} className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
@@ -390,8 +446,14 @@ export default function Game() {
                         </button>
                     </div>
                 </div>
-                {win == 1 ? <h1 className="text-lg md:text-xl">You have Win!</h1> : null}
-                {win == 0 ? <h1 className="text-lg md:text-xl">You have Lost!</h1>: null}
+                {win == 1 ? <h1 className="text-lg md:text-xl mt-10">You have Win!</h1> : null}
+                {win == 0 ? <h1 className="text-lg md:text-xl mt-10">You have Lost!</h1>: null}
+                <Form className="w-[100%] flex justify-center mt-10">
+                    <input onChange={e => setCurrSaveSessionId(e.target.value)} type="text" name="saveSessionId" placeholder="Load a previous session. Ex: UMeATUXIVmPqqvQCbwBZ" className="flex-1 text-black px-1"/>
+                    <button onClick={findSession} type="button" className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
+                        <Image src="/load_icon.png" width={40} height={40} alt="load_icon"/>
+                    </button>
+                </Form>
             </div>
             <Board value={board2}/>
         </>

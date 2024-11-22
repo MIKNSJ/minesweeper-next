@@ -15,7 +15,7 @@ function rand(max) {
 function findAndDelete(item) {
     for (let i = 0; i < asciiList.length; i++) {
         if (asciiList[i] === item) {
-            console.log(asciiList.pop(i, 1));
+            asciiList.pop(i, 1);
         }
     }
 }
