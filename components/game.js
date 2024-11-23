@@ -19,7 +19,7 @@ import User from "../models/User.js";
 */
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
-//const visitedCells = new Set([]);
+var visitedCells = new Set();
 
 
 function rand() {
@@ -32,7 +32,7 @@ export default function Game() {
     // const [cells, setCells] = useState(Array.from({length: 8}, () => Array(8).fill(0)));
     const [cells, setCells] = useState(Array(8).fill(null).map(() => Array(8).fill("")));
     const [hiddenCells, setHiddenCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
-    const [visitedCells, setVisitedCells] = useState(new Set());
+    //const [visitedCells, setVisitedCells] = useState(new Set());
     const [flagCells, setFlagCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
     const [flagCount, setFlagCount] = useState(10);
     const [flagMode, setFlagMode] = useState(0);
@@ -45,6 +45,7 @@ export default function Game() {
     const [score, setScore] = useState(0);
     const [startReset, setStartReset] = useState(0);
     const [currSaveSessionId, setCurrSaveSessionId] = useState(null);
+    const [oldSaveSessionId, setOldSaveSessionId] = useState(null);
     const [displaySessionId, setDisplaySessionId] = useState(null);
 
 
@@ -204,11 +205,12 @@ export default function Game() {
 
 
     function traverseCells(x, y) {
+        console.log("called");
         const modifiedCells = [...cells]; // or cells.slice()
         const modifiedFlagCells = [...flagCells];
-        const modifiedVisitedCells = new Set(visitedCells);
+        //const modifiedVisitedCells = new Set(visitedCells);
 
-        if (x < 0 || x >= DIMENSION_BOUNDS || y < 0 || y >= DIMENSION_BOUNDS || modifiedVisitedCells.has(`${x},${y}`)) {
+        if (x < 0 || x >= DIMENSION_BOUNDS || y < 0 || y >= DIMENSION_BOUNDS || visitedCells.has(`${x},${y}`)) {
             return;
         }
 
@@ -216,37 +218,21 @@ export default function Game() {
             return;
         }
 
-        visitedCells.add(`${x},${y}`); // was not here
-        setVisitedCells(modifiedVisitedCells); // was not here
-        setScore(score => score + 1); // was not here
-
-        if (hiddenCells[x][y] !== '-') {
-            modifiedCells[x][y] = hiddenCells[x][y];
-            //setScore(score => score + 1);
-            //modifiedVisitedCells.add(`${x},${y}`);
-            //visitedCells.add(`${x},${y}`);
-            //setVisitedCells(modifiedVisitedCells);
-            setCells(modifiedCells);
-
-            if (flagCells[x][y] == 1) {
-                modifiedFlagCells[x][y] = 0;
-                setFlagCells(modifiedFlagCells);
-                setFlagCount(flagCount => flagCount + 1);
-            }
-            return;
-        }
-
-        modifiedCells[x][y] = hiddenCells[x][y];
-        //setScore(score => score + 1);
-        //modifiedVisitedCells.add(`${x},${y}`);
-        //visitedCells.add(`${x},${y}`);
-        //setVisitedCells(modifiedVisitedCells);
-        setCells(modifiedCells);
-
-        if (flagCells[x][y] == 1) {
+        if (flagCells[x][y] === 1) {
             modifiedFlagCells[x][y] = 0;
             setFlagCells(modifiedFlagCells);
             setFlagCount(flagCount => flagCount + 1);
+        }
+
+        visitedCells.add(`${x},${y}`);
+        modifiedCells[x][y] = hiddenCells[x][y];
+        setCells(modifiedCells);
+        /*modifiedVisitedCells.add(`${x},${y}`);
+        setVisitedCells(new Set(modifiedVisitedCells));*/
+        setScore(score => score + 1);
+
+        if (hiddenCells[x][y] !== "-") {
+            return;
         }
 
         traverseCells(x, y-1);
@@ -283,6 +269,8 @@ export default function Game() {
 
 
     useEffect(() => {
+        setCurrSaveSessionId(oldSaveSessionId);
+
         if (startReset === 0) {
             reset();
         }
@@ -344,7 +332,7 @@ export default function Game() {
 
 
     function handleFlags() {
-        if (flagMode == 0) {
+        if (flagMode === 0) {
             setFlagMode(1);
         } else {
             setFlagMode(0);
@@ -376,8 +364,8 @@ export default function Game() {
 
         setCells(modifiedCells);
         setHiddenCells(modifiedHiddenCells);
-        setVisitedCells(new Set());
-        //visitedCells.clear();
+        //setVisitedCells(new Set());
+        visitedCells.clear();
         setFlagCells(modifiedFlagCells);
         setFlagCount(10);
         setFlagMode(0);
@@ -390,6 +378,7 @@ export default function Game() {
         setScore(0);
         setStartReset(1);
         setCurrSaveSessionId(null);
+        setOldSaveSessionId(null);
         setDisplaySessionId(null);
     }
 
@@ -412,8 +401,6 @@ export default function Game() {
                 firstMine: firstMine,
                 score: score,
             });
-
-            console.log(token);
             
             // Send the data to the backend API
             const response = await fetch("/api/save", {
@@ -448,7 +435,8 @@ export default function Game() {
             reset();
             setCells(data.cells);
             setHiddenCells(data.hiddenCells);
-            setVisitedCells(new Set(data.visitedCells));
+            //setVisitedCells(new Set(data.visitedCells));
+            visitedCells = new Set(data.visitedCells);
             setFlagCells(data.flagCells);
             setFlagCount(data.flagCount);
             setFlagMode(data.flagMode)
@@ -456,6 +444,7 @@ export default function Game() {
             setNumbers(data.numbers);
             setFirstMine(data.firstMine);
             setScore(data.score);
+            setOldSaveSessionId(data.saveSessionId);
             setDisplaySessionId(data.saveSessionId);
             alert("Your game has loaded.");
         } else if (response.status === 404) {
@@ -487,17 +476,17 @@ export default function Game() {
                         </button>
                     </div>
                 </div>
-                {win == 1 ? <h1 className="text-lg md:text-xl mt-10">You have Win!</h1> : null}
+                {win == 1 ? <h1 className="text-lg md:text-xl mt-10">You have Won!</h1> : null}
                 {win == 0 ? <h1 className="text-lg md:text-xl mt-10">You have Lost!</h1>: null}
                 <Form className="w-[100%] flex justify-center mt-10">
-                    <input onChange={e => setCurrSaveSessionId(e.target.value)} type="text" name="saveSessionId" placeholder="Load a previous session. Ex: UMeATUXIVmPqqvQCbwBZ" className="flex-1 text-black px-1"/>
+                    <input onChange={e => setCurrSaveSessionId(e.target.value)} type="text" name="saveSessionId" placeholder="Load a previous session. Ex: UMeATUXIVmPqqvQCbwBZ" autoComplete="off" className="flex-1 text-black px-1"/>
                     <button onClick={findSession} type="button" className="text-sm md:text-lg flex border-2 hover:bg-slate-500">
                         <Image src="/load_icon.png" width={40} height={40} alt="load_icon"/>
                     </button>
                 </Form>
                 <h3 className="self-start text-xs sm:text-base">Session ID: {displaySessionId}</h3>
             </div>
-            <Board value={board2}/>
+            {/*<Board value={board2}/>*/}
         </>
     )
 }
