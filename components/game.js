@@ -19,7 +19,7 @@ import User from "../models/User.js";
 */
 const DIMENSION_BOUNDS = 8;
 const MINES_COUNT = 10;
-const visitedCells = new Set([]);
+//const visitedCells = new Set([]);
 
 
 function rand() {
@@ -32,6 +32,7 @@ export default function Game() {
     // const [cells, setCells] = useState(Array.from({length: 8}, () => Array(8).fill(0)));
     const [cells, setCells] = useState(Array(8).fill(null).map(() => Array(8).fill("")));
     const [hiddenCells, setHiddenCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
+    const [visitedCells, setVisitedCells] = useState(new Set());
     const [flagCells, setFlagCells] = useState(Array(8).fill(null).map(() => Array(8).fill(0)));
     const [flagCount, setFlagCount] = useState(10);
     const [flagMode, setFlagMode] = useState(0);
@@ -44,6 +45,7 @@ export default function Game() {
     const [score, setScore] = useState(0);
     const [startReset, setStartReset] = useState(0);
     const [currSaveSessionId, setCurrSaveSessionId] = useState(null);
+    const [displaySessionId, setDisplaySessionId] = useState(null);
 
 
     function generateMines() {
@@ -73,36 +75,60 @@ export default function Game() {
                             modifiedHiddenCells[i-1][j-1]+=1;
                         }
 
+                        /*if (modifiedHiddenCells[i][j-1] != "*") {
+                            modifiedHiddenCells[i][j-1]+=1;
+                        }*/
+
+                        /*if (modifiedHiddenCells[i-1][j] != "*") {
+                            modifiedHiddenCells[i-1][j]+=1;
+                        }*/
+                    }
+
+                    if (j - 1 >= 0) {
                         if (modifiedHiddenCells[i][j-1] != "*") {
                             modifiedHiddenCells[i][j-1]+=1;
                         }
+                    }
 
+                    if (i - 1 >= 0) {
                         if (modifiedHiddenCells[i-1][j] != "*") {
                             modifiedHiddenCells[i-1][j]+=1;
                         }
                     }
 
-                    if (i + 1 < hiddenCells.length && j + 1 < hiddenCells.length) {
-                        if (modifiedHiddenCells[i][j+1] != "*") {
+                    if (i + 1 < modifiedHiddenCells.length && j + 1 < modifiedHiddenCells.length) {
+                        /*if (modifiedHiddenCells[i][j+1] != "*") {
                             modifiedHiddenCells[i][j+1]+=1;
-                        }
+                        }*/
                         
-                        if (modifiedHiddenCells[i+1][j] != "*") {
+                        /*if (modifiedHiddenCells[i+1][j] != "*") {
                             modifiedHiddenCells[i+1][j]+=1;
-                        }
+                        }*/
                         
                         if (modifiedHiddenCells[i+1][j+1] != "*") {
                             modifiedHiddenCells[i+1][j+1]+=1;
                         }
                     }
 
-                    if (i + 1 < hiddenCells.length && j - 1 >= 0) {
+                    if (j + 1 < modifiedHiddenCells.length) {
+                        if (modifiedHiddenCells[i][j+1] != "*") {
+                            modifiedHiddenCells[i][j+1]+=1;
+                        }
+                    }
+
+                    if (i + 1 < modifiedHiddenCells.length) {
+                        if (modifiedHiddenCells[i+1][j] != "*") {
+                            modifiedHiddenCells[i+1][j]+=1;
+                        }
+                    }
+
+                    if (i + 1 < modifiedHiddenCells.length && j - 1 >= 0) {
                         if (modifiedHiddenCells[i+1][j-1] != "*") {
                             modifiedHiddenCells[i+1][j-1]+=1;
                         }
                     }
 
-                    if (i - 1 >= 0 && j + 1 < hiddenCells.length) {
+                    if (i - 1 >= 0 && j + 1 < modifiedHiddenCells.length) {
                         if (modifiedHiddenCells[i-1][j+1] != "*") {
                             modifiedHiddenCells[i-1][j+1]+=1;
                         }
@@ -180,22 +206,26 @@ export default function Game() {
     function traverseCells(x, y) {
         const modifiedCells = [...cells]; // or cells.slice()
         const modifiedFlagCells = [...flagCells];
-        if (score == 54) {
-            setWin(1);
-        }
+        const modifiedVisitedCells = new Set(visitedCells);
 
-        if (x < 0 || x >= DIMENSION_BOUNDS || y < 0 || y >= DIMENSION_BOUNDS || visitedCells.has(`${x},${y}`)) {
+        if (x < 0 || x >= DIMENSION_BOUNDS || y < 0 || y >= DIMENSION_BOUNDS || modifiedVisitedCells.has(`${x},${y}`)) {
             return;
         }
 
-        if (hiddenCells[x][y] == "*") {
+        if (hiddenCells[x][y] === "*") {
             return;
         }
 
-        if (hiddenCells[x][y] != '-') {
+        visitedCells.add(`${x},${y}`); // was not here
+        setVisitedCells(modifiedVisitedCells); // was not here
+        setScore(score => score + 1); // was not here
+
+        if (hiddenCells[x][y] !== '-') {
             modifiedCells[x][y] = hiddenCells[x][y];
-            setScore(score => score + 1);
-            visitedCells.add(`${x},${y}`);
+            //setScore(score => score + 1);
+            //modifiedVisitedCells.add(`${x},${y}`);
+            //visitedCells.add(`${x},${y}`);
+            //setVisitedCells(modifiedVisitedCells);
             setCells(modifiedCells);
 
             if (flagCells[x][y] == 1) {
@@ -207,8 +237,10 @@ export default function Game() {
         }
 
         modifiedCells[x][y] = hiddenCells[x][y];
-        setScore(score => score + 1);
-        visitedCells.add(`${x},${y}`);
+        //setScore(score => score + 1);
+        //modifiedVisitedCells.add(`${x},${y}`);
+        //visitedCells.add(`${x},${y}`);
+        //setVisitedCells(modifiedVisitedCells);
         setCells(modifiedCells);
 
         if (flagCells[x][y] == 1) {
@@ -266,7 +298,12 @@ export default function Game() {
         if (replaceZeroes != 1) {
             replaceZeroesToDashes();
         }
-    }, [mines, numbers, replaceZeroes, startReset]);
+
+        if (score >= 54) {
+            setWin(1);
+            return;
+        }
+    }, [startReset, mines, numbers, replaceZeroes, score]);
 
 
     function handleClick(row, col) {
@@ -285,17 +322,17 @@ export default function Game() {
                 }
 
                 traverseCells(row, col);
-            } else if (flagMode != 1 && flagCells[row][col] == 1) { // not in flag mode and cell is a flag
-                if (flagCells[row][col] == 1 && cells[row][col] == "") { // cell is flagged
-                    const modifiedFlagCells = [...flagCells]
+            } else if (flagMode != 1 && flagCells[row][col] === 1) { // not in flag mode and cell is a flag
+                if (flagCells[row][col] === 1 && cells[row][col] === "") { // cell is flagged
+                    const modifiedFlagCells = [...flagCells];
                     modifiedFlagCells[row][col] = 0;
                     setFlagCells(modifiedFlagCells);
                     setFlagCount(flagCount => flagCount + 1);
                 }
             } else { // in flag mode
                 if (flagCount > 0) { // we have enough flags
-                    if (flagCells[row][col] == 0 && cells[row][col] == "") { // cell is not flagged
-                        const modifiedFlagCells = [...flagCells]
+                    if (flagCells[row][col] === 0 && cells[row][col] === "") { // cell is not flagged
+                        const modifiedFlagCells = [...flagCells];
                         modifiedFlagCells[row][col] = 1;
                         setFlagCells(modifiedFlagCells);
                         setFlagCount(flagCount => flagCount - 1);
@@ -339,7 +376,8 @@ export default function Game() {
 
         setCells(modifiedCells);
         setHiddenCells(modifiedHiddenCells);
-        visitedCells.clear();
+        setVisitedCells(new Set());
+        //visitedCells.clear();
         setFlagCells(modifiedFlagCells);
         setFlagCount(10);
         setFlagMode(0);
@@ -352,19 +390,20 @@ export default function Game() {
         setScore(0);
         setStartReset(1);
         setCurrSaveSessionId(null);
+        setDisplaySessionId(null);
     }
 
 
     async function handleSave() {
-        if (win == null) {
+        if (win === null && score > 0) {
             const token = generateToken();
             await dbConnect();
             const userSave = await new User({
                 saveSessionId: token,
                 cells: cells,
                 hiddenCells: hiddenCells,
+                visitedCells: Array.from(visitedCells),
                 flagCells: flagCells,
-                visitedCells: visitedCells,
                 flagCount: flagCount,
                 flagMode: flagMode,
                 mines: mines,
@@ -373,6 +412,8 @@ export default function Game() {
                 firstMine: firstMine,
                 score: score,
             });
+
+            console.log(token);
             
             // Send the data to the backend API
             const response = await fetch("/api/save", {
@@ -380,12 +421,13 @@ export default function Game() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(userSave)
+                body: JSON.stringify(userSave),
             });
 
             const data = await response.json();
 
             if (response.status === 200) {
+                setDisplaySessionId(token);
                 alert("Your game has been saved.\nSession ID: " + token);
             } else if (response.status === 401) {
                 handleSave();
@@ -393,29 +435,28 @@ export default function Game() {
                 alert(data.message || "An error occurred while saving your game.");
             }
         } else {
-            alert("You cannot save your game because it has ended.");
+            alert("You cannot save your game at this time.");
         }
     }
 
 
     async function findSession() {
-        console.log(currSaveSessionId)
         const response = await fetch(`api/save?saveSessionId=${currSaveSessionId}`);
         const data = await response.json();
-        console.log(data);
 
         if (response.status === 200) {
             reset();
             setCells(data.cells);
             setHiddenCells(data.hiddenCells);
+            setVisitedCells(new Set(data.visitedCells));
             setFlagCells(data.flagCells);
-            visitedCells = data.visitedCells;
             setFlagCount(data.flagCount);
             setFlagMode(data.flagMode)
             setMines(data.mines);
             setNumbers(data.numbers);
             setFirstMine(data.firstMine);
             setScore(data.score);
+            setDisplaySessionId(data.saveSessionId);
             alert("Your game has loaded.");
         } else if (response.status === 404) {
             alert("Your save could not be found.");
@@ -454,6 +495,7 @@ export default function Game() {
                         <Image src="/load_icon.png" width={40} height={40} alt="load_icon"/>
                     </button>
                 </Form>
+                <h3 className="self-start text-xs sm:text-base">Session ID: {displaySessionId}</h3>
             </div>
             <Board value={board2}/>
         </>

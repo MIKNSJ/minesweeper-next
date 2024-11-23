@@ -1,3 +1,7 @@
+// SYMBOLS HAS BEEN DISABLED BECAUSE MONGOOSE CANNOT FIND THE SESSION ID IF EXISTS.
+
+
+
 const alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
     "t", "u", "v", "w", "x", "y", "z"];
 const numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
@@ -37,6 +41,10 @@ function generateToken() {
             findAndDelete("symbols");
         }
 
+        if (alphaCount > 20) {
+            findAndDelete("alphabet");
+        }
+
         var asciiIdx = rand(asciiList.length);
 
         if (asciiList[asciiIdx] === "alphabet" || token.length === 0) {
@@ -55,9 +63,9 @@ function generateToken() {
             token+=numbers[nums_idx];
             numbersCount++;
         } else {
-            var symbols_idx = rand(symbols.length);
+            /*var symbols_idx = rand(symbols.length);
             token+=symbols[symbols_idx];
-            symbolsCount++;
+            symbolsCount++;*/
         }
     }
 
